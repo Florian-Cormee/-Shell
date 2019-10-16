@@ -10,17 +10,19 @@ ifeq ($(MODE), debug)
 CFLAGS += $(CFLAGS_DEBUG)
 endif
 
-build: main.o parser.o command.o cd.o
+build: main.o parser.o command.o cd.o utils.o
 	$(CC) $(CFLAGS) -o $(EXEC) $^
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	@-rm *.o
+	@rm -rf *.o
 	@echo "Removed all object files"
 
 vclean: clean
-	@-rm $(EXEC)
-	@-rm *.exe
+	@rm -rf $(EXEC)
+	@rm -rf *.exe
 	@echo "Removed all executable files"
+
+rebuild: vclean build

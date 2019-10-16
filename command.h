@@ -19,6 +19,6 @@ void empty_cmd(cmd_t *cmd);
  * Executes the given command in a seperate process
  * @return int Does not return on success. On failure return -1.
  */
-int exec(const cmd_t *cmd);
+int exec(cmd_t *cmd);
 
 #endif

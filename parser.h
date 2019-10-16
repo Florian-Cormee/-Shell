@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "command.h"
+#include "boolean.h"
 
 #define MAX_TOKEN 32
 #define ARG_SEPERATOR " "

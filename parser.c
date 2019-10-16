@@ -20,8 +20,7 @@ int parse(char *input, cmd_t *cmd)
 char **tokenize(char *s, const char *separator)
 {
     size_t i = 0;
-    char **tokArray = malloc(sizeof(char *) * MAX_TOKEN);
-
+    char **tokArray = calloc(sizeof(char *), MAX_TOKEN);
     char *token = strtok(s, separator);
     tokArray[0] = token;
 
