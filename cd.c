@@ -23,7 +23,6 @@ char* get_cwd(char *wdir, size_t size)
 
     if (strcmp(getenv("HOME"), wdir) == 0)
     {
-        //wdir = "~";
         strcpy(wdir, "~");
     }
     return wdir;
