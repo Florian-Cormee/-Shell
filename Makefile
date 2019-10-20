@@ -3,14 +3,14 @@ MODE := debug
 EXEC := ushell
 
 CC := gcc
-CFLAGS := -Wall
+CFLAGS := -Wall -std=gnu11
 CFLAGS_DEBUG := -g -O0
 
 ifeq ($(MODE), debug)
 CFLAGS += $(CFLAGS_DEBUG)
 endif
 
-build: main.o parser.o command.o cd.o utils.o
+build: main.o parser.o command.o cd.o utils.o pipe.o logger.o
 	$(CC) $(CFLAGS) -o $(EXEC) $^
 
 %.o : %.c
@@ -26,3 +26,6 @@ vclean: clean
 	@echo "Removed all executable files"
 
 rebuild: vclean build
+
+valgrind: build
+	valgrind --leak-check=full ./$(EXEC)

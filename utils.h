@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
 size_t length(char **array);
 
