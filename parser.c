@@ -1,10 +1,11 @@
 #include "parser.h"
+#include "main.h"
 #include <stdlib.h>
 #include <string.h>
 
-int parse(char *input, cmd_t *cmd)
+int parse(const char *input, cmd_t *cmd)
 {
-    empty_cmd(cmd);
+    clear_cmd(cmd);
     char **tokArray = tokenize(input, ARG_SEPERATOR);
 
     if (tokArray[0] == NULL)
@@ -17,24 +18,24 @@ int parse(char *input, cmd_t *cmd)
     return 0;
 }
 
-char **tokenize(char *s, const char *separator)
+char **tokenize(const char *s, const char *separator)
 {
-    size_t i = 0;
-    char **tokArray = calloc(sizeof(char *), MAX_TOKEN);
-    char *token = strtok(s, separator);
-    tokArray[0] = token;
+    char sCopy[INPUT_SIZE];
+    strcpy(sCopy, s);
+    char *token = strtok(sCopy, separator);
 
-    if (tokArray[0] == NULL)
+    if (token == NULL)
     {
-        return tokArray;
+        return NULL;
     }
 
-    do
+    char **tokArray = calloc(sizeof(char *), MAX_TOKEN);
+
+    for (size_t i = 0; token != NULL && i < MAX_TOKEN - 1; i++)
     {
-        i++;
+        tokArray[i] = strdup(token);
         token = strtok(NULL, separator);
-        tokArray[i] = token;
-    } while (token != NULL);
+    }
     return tokArray;
 }
 
@@ -47,4 +48,21 @@ void str_replace(char *s, char c, char replacement)
             s[i] = replacement;
         }
     }
+}
+
+char get_modifiers(const char *input)
+{
+    char modifiers = 0;
+    for (size_t i = 0; input[i] != '\0'; i++)
+    {
+        if (input[i] == BACKGROUND_OPERATOR)
+        {
+            modifiers |= BACKGROUND_MOD;
+        }
+        else if (input[i] == PIPE_OPERATOR)
+        {
+            modifiers |= PIPE_MOD;
+        }
+    }
+    return modifiers;
 }
