@@ -12,9 +12,8 @@ cmd_t *new_cmd(char *name)
 {
     cmd_t *cmd = (cmd_t *)malloc(sizeof(cmd_t));
     cmd->name = name;
-    cmd->args = NULL;
     cmd->isBackground = false;
-    cmd->outPath = NULL;
+    // cmd->outPath = NULL;
 
     cmd->args = (char **)malloc(sizeof(char *));
     cmd->args[0] = NULL;
@@ -38,11 +37,11 @@ void clear_cmd(cmd_t *cmd)
         cmd->args = NULL;
     }
     cmd->isBackground = false;
-    if (cmd->outPath != NULL)
-    {
-        free(cmd->outPath);
-        cmd->outPath = NULL;
-    }
+    // if (cmd->outPath != NULL)
+    // {
+    //     free(cmd->outPath);
+    //     cmd->outPath = NULL;
+    // }
 }
 
 void delete_cmd(cmd_t **cmd)
@@ -59,13 +58,13 @@ int exec(cmd_t *cmd)
         return -1;
     }
     // Test for background
-    size_t argc = length(cmd->args);
-    bool background = argc > 1 && strcmp("&", cmd->args[argc - 1]) == 0;
-    if (background)
-    {
-        free(cmd->args[argc - 1]);
-        cmd->args[argc - 1] = NULL;
-    }
+    // size_t argc = length(cmd->args);
+    // bool background = argc > 1 && strcmp("&", cmd->args[argc - 1]) == 0;
+    // if (background)
+    // {
+    //     free(cmd->args[argc - 1]);
+    //     cmd->args[argc - 1] = NULL;
+    // }
     // Executes the program in a new process
     pid_t pid = fork();
     if (pid < 0)
@@ -78,7 +77,7 @@ int exec(cmd_t *cmd)
     }
     else
     {
-        if (background)
+        if (cmd->isBackground)
         {
             return 0;
         }

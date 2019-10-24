@@ -8,6 +8,29 @@
 
 #define PIPE_SIZE 2
 typedef cmd_t* pipe_t;
+typedef struct pipedCmd pipedCmd_t;
+union output
+{
+    char *outPath;
+    pipedCmd_t *pcmd;
+};
+typedef union output output_t;
+
+enum outputType {
+    NONE, PIPED_CMD, PATH
+};
+typedef enum outputType outputType_t;
+
+struct pipedCmd
+{
+    cmd_t *cmd;
+    output_t* output;
+    outputType_t outputType;
+};
+
+
+pipedCmd_t* new_pipedCmd();
+void delete_pipedCmd(pipedCmd_t **cmd);
 
 pipe_t * new_pipe();
 
@@ -29,5 +52,9 @@ int parse_pipe(char *input, pipe_t* pipe);
  * @return int
  */
 int execp(pipe_t* pipeCmd);
+
+int execpcmd(pipedCmd_t *pcmd, bool waitForChild, int inputfd);
+
+int expipe(pipedCmd_t *pcmd);
 
 #endif // !PIPE_H

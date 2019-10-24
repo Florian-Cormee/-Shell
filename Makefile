@@ -29,3 +29,6 @@ rebuild: vclean build
 
 valgrind: build
 	valgrind --leak-check=full ./$(EXEC)
+
+debug: build
+	gdb ./$(EXEC)

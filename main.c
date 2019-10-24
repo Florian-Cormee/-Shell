@@ -1,7 +1,7 @@
 #include "main.h"
-#include "logger.h"
 #include "cd.h"
 #include "command.h"
+#include "logger.h"
 #include "parser.h"
 #include "pipe.h"
 #include <stdio.h>
@@ -25,13 +25,12 @@ int main(void)
     puts("Welcome in microShell");
 
     char input[INPUT_SIZE];
-    char modifiers = 0;
+    // char modifiers = 0;
     memset(input, '\0', INPUT_SIZE); // Initialize input as an empty string
-    cmd_t *cmd = new_cmd(NULL);   // Empty command initialization
-
+    // cmd_t *cmd = new_cmd(NULL);      // Empty command initialization
     print_cwd();
 
-    while (strcmp(EXIT_CMD, input) != 0)
+    while (true)
     {
         // Gets the input from stdin
         if (!fgets(input, INPUT_SIZE, stdin))
@@ -40,8 +39,30 @@ int main(void)
             return -1;
         }
         str_replace(input, '\n', '\0');
-        // Parses the command out of the input
-        modifiers = get_modifiers(input);
+
+        printf("Input : \"%s\"\n", input);
+
+        if (strncmp(EXIT_CMD, input,strlen(EXIT_CMD)) == 0)
+        {
+            break;
+        }
+        else if (strncmp(CD_CMD, input, strlen(CD_CMD)) == 0)
+        {
+            change_dir(input);
+        }
+        else if (strncmp(PWD_CMD, input, strlen(PWD_CMD)) == 0)
+        {
+            puts(wdir);
+        }
+        else
+        {
+            // Parses the command out of the input
+            pipedCmd_t *pcmd = pparse(input);
+            //execpcmd(pcmd, true, -1);
+            //expipe(pcmd);
+            delete_pipedCmd(&pcmd);
+        }
+        /*modifiers = get_modifiers(input);
 
         if (IS_PIPED(modifiers))
         {
@@ -98,13 +119,13 @@ int main(void)
             {
                 fprintf(stderr, "Parsing error\n");
             }
-        }
+        }*/
 
         print_cwd();
     }
 
-    clear_cmd(cmd);
-    free(cmd);
+    // clear_cmd(cmd);
+    // free(cmd);
 
     return 0;
 }
