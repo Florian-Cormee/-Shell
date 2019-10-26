@@ -93,6 +93,21 @@ void str_replace(char *s, char c, char replacement)
     }
 }
 
+bool is_background(const char *input)
+{
+    size_t length = strlen(input);
+    for (size_t i = 0; i < length; i++)
+    {
+        size_t index = length - 1 - i;
+        if (input[index] == ' ')
+        {
+            continue;
+        }
+        return input[index] == BACKGROUND_OPERATOR;
+    }
+    return false;
+}
+
 char get_modifiers(const char *input)
 {
     char modifiers = 0;
@@ -112,21 +127,29 @@ char get_modifiers(const char *input)
 
 pipedCmd_t *pparse(const char *input)
 {
-    bool hasError = false;
-    char modifiers = get_modifiers(input);
-    if (IS_PIPED(modifiers) && IS_BACKGROUNDED(modifiers))
-    {
-        // Incompatible operators
-        error("Incompatible operators found: & |");
-        return NULL;
-    }
+    // Piped command separator as a string
     const char pipeSeparator[] = {PIPE_OPERATOR, '\0'};
+    // Standard output redirection operator as a string
+    const char outputOperator[] = {OUTPUT_MODIFIER, '\0'};
+    // Interrups parsing tasks and jumps to freeing memory
+    bool hasError = false;
+    // Input tokenized as piped command
     char **pipedInput = tokenize(input, pipeSeparator);
     size_t pipedInputCount = length(pipedInput);
+    // Command array
     pipedCmd_t **inputArray = calloc(sizeof(pipedCmd_t *), pipedInputCount);
+    // Command's arguments
+    char **args;
+    size_t argsLength;
 
     for (size_t i = 0; i < pipedInputCount; i++)
     {
+        if (is_background(pipedInput[i]))
+        {
+            error("Cannot run in background a piped command!");
+            hasError = true;
+            break;
+        }
         // Parses each command without linking piped output
         inputArray[i] = new_pipedCmd();
         int result = parse(pipedInput[i], inputArray[i]->cmd);
@@ -136,17 +159,14 @@ pipedCmd_t *pparse(const char *input)
             hasError = true;
             break;
         }
-        printf("Parsed : %s\n", inputArray[i]->cmd->name);
+
         // File output parsing
-        const char outputOperator[] = {OUTPUT_MODIFIER, '\0'};
-        cmd_t *cmd = inputArray[i]->cmd;
-        char **args = cmd->args;
-        size_t argsLength = length(args);
+        args = inputArray[i]->cmd->args;
+        argsLength = length(args);
         if (argsLength >= 2 &&
             strcmp(args[argsLength - 2], outputOperator) == 0)
         {
-            inputArray[i]->outputType = PATH;
-            inputArray[i]->output->outPath = args[argsLength - 1];
+            inputArray[i]->outPath = args[argsLength - 1];
             // Remove modifier and value from the list of arguments
             free(args[argsLength - 2]);
             args[argsLength - 2] = NULL;
@@ -154,30 +174,20 @@ pipedCmd_t *pparse(const char *input)
         }
     }
     // Links the piped output
-    for (size_t i = 1; i < pipedInputCount; i++)
+    for (size_t i = 1; i < pipedInputCount && !hasError; i++)
     {
         pipedCmd_t *parent = inputArray[pipedInputCount - i - 1];
         printf("Parent : %s\n", parent->cmd->name);
-        if (parent->outputType == NONE)
+        pipedCmd_t *child = inputArray[pipedInputCount - i];
+        if (child != NULL)
         {
-            parent->outputType = PIPED_CMD;
-            pipedCmd_t *child = inputArray[pipedInputCount - i];
-            if (child != NULL)
-            {
-                printf("Child : %s\n", child->cmd->name);
-            }
-            else
-            {
-                puts("Childless");
-            }
-            parent->output->pcmd = child;
+            printf("Child : %s\n", child->cmd->name);
         }
         else
         {
-            warn("Conflicting output; cancelling pipes");
-            // On already defined output, delete all previous children
-            delete_pipedCmd(&(inputArray[pipedInputCount - i]));
+            puts("Childless");
         }
+        parent->childCmd = child;
     }
 
     pipedCmd_t *pipedCmd = NULL;

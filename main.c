@@ -58,8 +58,7 @@ int main(void)
         {
             // Parses the command out of the input
             pipedCmd_t *pcmd = pparse(input);
-            //execpcmd(pcmd, true, -1);
-            //expipe(pcmd);
+            expipe(pcmd, !is_background(input));
             delete_pipedCmd(&pcmd);
         }
         /*modifiers = get_modifiers(input);

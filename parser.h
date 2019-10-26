@@ -22,6 +22,8 @@ int parse(const char *input, cmd_t *cmds);
 
 pipedCmd_t* pparse(const char* input);
 
+bool is_background(const char*input);
+
 char **tokenize(const char *s, const char *separator);
 
 void delete_tokenArray(char ***s);
