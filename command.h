@@ -14,7 +14,6 @@ struct cmd {
     char *name;
     char **args;
     bool isBackground;
-    char *outPath;
 };
 
 typedef struct cmd cmd_t;

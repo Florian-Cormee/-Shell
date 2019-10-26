@@ -7,27 +7,19 @@
 #define PIPE_OUT 1
 
 #define PIPE_SIZE 2
-typedef cmd_t* pipe_t;
+typedef struct pipedCmd pipedCmd_t;
 
-pipe_t * new_pipe();
+struct pipedCmd
+{
+    cmd_t *cmd;
+    char *outPath;
+    pipedCmd_t *childCmd;
+};
 
-void delete_pipe(pipe_t** pipe);
+pipedCmd_t *new_pipedCmd();
 
-/**
- * @brief Parses a pipe from the input
- *
- * @param input The input from the user
- * @param pipe The address to store the parsed pipe
- * @return int 0 on success, otherwise -1
- */
-int parse_pipe(char *input, pipe_t* pipe);
+void delete_pipedCmd(pipedCmd_t **cmd);
 
-/**
- * @brief Executes piped commands
- *
- * @param cmd
- * @return int
- */
-int execp(pipe_t* pipeCmd);
+int expipe(pipedCmd_t *pcmd, bool waitChildren);
 
 #endif // !PIPE_H

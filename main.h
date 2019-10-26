@@ -12,6 +12,7 @@
 
 #define BACKGROUND_MOD 1
 #define PIPE_MOD 2
+#define PATH_OUT_MOD 4
 
 #define EXIT_CMD "exit"
 #define CD_CMD "cd"
