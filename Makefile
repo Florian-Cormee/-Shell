@@ -10,7 +10,7 @@ ifeq ($(MODE), debug)
 CFLAGS += $(CFLAGS_DEBUG)
 endif
 
-build: main.o parser.o command.o cd.o utils.o pipe.o logger.o
+build: main.o parser.o cd.o utils.o command.o logger.o
 	$(CC) $(CFLAGS) -o $(EXEC) $^
 
 %.o : %.c
