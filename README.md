@@ -4,7 +4,7 @@
 
 * 1.1 - Exécution de programmes sans arguments au premier plan
 * 1.2 - Exécution de programmes avec des arguments
-* 1.3 - Builtin cv
+* 1.3 - Builtin cd
 * 2.1 - Commandes en arrière plan
 * 2.2 - Tuyaux
 * 2.3 - Redirection de stdout
