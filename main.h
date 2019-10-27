@@ -9,6 +9,8 @@
 
 #define PIPE_OPERATOR '|'
 #define BACKGROUND_OPERATOR '&'
+#define OUTPUT_OPERATOR '>'
+#define CHAINED_CMD_OPERATOR ';'
 
 #define BACKGROUND_MOD 1
 #define PIPE_MOD 2
@@ -18,4 +20,4 @@
 #define CD_CMD "cd"
 #define PWD_CMD "pwd"
 
-#endif // !MAIN_H
+#endif

@@ -1,80 +1,58 @@
 #include "parser.h"
-#include "logger.h"
-#include "main.h"
-#include "utils.h"
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "logger.h"
+#include "main.h"
+#include "utils.h"
 
-int find(char **stringArray, const char *string)
-{
-    for (int i = 0; stringArray[i] != NULL; i++)
-    {
-        if (strcmp(stringArray[i], string) == 0)
-        {
-            return i;
+void str_replace(char *s, char c, char replacement) {
+    for (size_t i = 0; s[i] != '\0'; i++) {
+        if (s[i] == c) {
+            s[i] = replacement;
         }
     }
-    return -1;
 }
 
-int parse(const char *input, cmd_t *cmd)
-{
-    clear_cmd(cmd);
-    char **tokArray = tokenize(input, ARG_SEPERATOR);
-
-    if (tokArray[0] == NULL)
-    {
-        delete_tokenArray(&tokArray);
-        return -1;
-    }
-
-    char modifiers = get_modifiers(input);
-    if (IS_BACKGROUNDED(modifiers))
-    {
-        cmd->isBackground = true;
-        const char operator[] = {BACKGROUND_OPERATOR, '\0'};
-        size_t index = find(tokArray, operator);
-        if (index != -1)
-        {
-            free(tokArray[index]);
-            tokArray[index] = NULL;
-        }
-    }
-
-    cmd->name = strdup(tokArray[0]);
-    cmd->args = tokArray;
-    return 0;
-}
-
-char **tokenize(const char *s, const char *separator)
-{
+char **tokenize(const char *s, const char *separator) {
+    // Copies the argument s
     char sCopy[INPUT_SIZE];
     strcpy(sCopy, s);
-    char *token = strtok(sCopy, separator);
 
-    if (token == NULL)
-    {
+    // Tokenizes the copy
+    char *token = strtok(sCopy, separator);
+    if (token == NULL) {
+        log_f(WARN, "No token has been found in '%s'.", s);
         return NULL;
     }
 
     char **tokArray = calloc(sizeof(char *), MAX_TOKEN);
+    if (tokArray == NULL) {
+        log_err(ERROR, "Memory allocation for an array of token has failed");
+        return NULL;
+    }
 
-    for (size_t i = 0; token != NULL && i < MAX_TOKEN - 1; i++)
-    {
-        tokArray[i] = strdup(token);
-        token = strtok(NULL, separator);
+    for (size_t i = 0; token != NULL && i < MAX_TOKEN - 1; i++) {
+        tokArray[i] = strdup(token); // Saves the latest token
+        if (tokArray[i] == NULL) {
+            log_err(ERROR, "String duplication has failed");
+            delete_token_array(&tokArray);
+            return NULL;
+        }
+
+        token = strtok(NULL, separator); // Retrieves the next token
     }
     return tokArray;
 }
 
-void delete_tokenArray(char ***s)
-{
+void delete_token_array(char ***s) {
+    if (s == NULL) return;
+
     char **tokArray = *s;
-    if (tokArray != NULL)
-    {
-        for (size_t i = 0; tokArray[i] != NULL; i++)
-        {
+    if (tokArray != NULL) {
+        for (size_t i = 0; tokArray[i] != NULL; i++) {
             free(tokArray[i]);
         }
         free(tokArray);
@@ -82,127 +60,166 @@ void delete_tokenArray(char ***s)
     }
 }
 
-void str_replace(char *s, char c, char replacement)
-{
-    for (size_t i = 0; s[i] != '\0'; i++)
-    {
-        if (s[i] == c)
-        {
-            s[i] = replacement;
+int find(char **stringArray, const char *string) {
+    if (stringArray == NULL || string == NULL) return -1;
+
+    for (int i = 0; stringArray[i] != NULL; i++) {
+        if (strcmp(stringArray[i], string) == 0) {
+            return i;
         }
     }
+
+    return -1;
 }
 
-bool is_background(const char *input)
-{
+bool is_background(const char *input) {
     size_t length = strlen(input);
-    for (size_t i = 0; i < length; i++)
-    {
+
+    for (size_t i = 0; i < length; i++) {
         size_t index = length - 1 - i;
-        if (input[index] == ' ')
-        {
+        if (input[index] == ' ') { // Ingores trailing white spaces
             continue;
         }
         return input[index] == BACKGROUND_OPERATOR;
-    }
+    } // End: Reversed iteration over input
     return false;
 }
 
-char get_modifiers(const char *input)
-{
-    char modifiers = 0;
-    for (size_t i = 0; input[i] != '\0'; i++)
-    {
-        if (input[i] == BACKGROUND_OPERATOR)
-        {
-            modifiers |= BACKGROUND_MOD;
-        }
-        else if (input[i] == PIPE_OPERATOR)
-        {
-            modifiers |= PIPE_MOD;
-        }
+/*
+ * Sub-functions used to parse commands
+ *
+ * No declared in header file for privacy. Should not be called elsewhere.
+ */
+
+/**
+ * @brief Predicates for the background property from the input
+ *
+ * @param input The raw user input
+ * @return TRUE if the task should be run in the background; otherwise FALSE
+ */
+bool is_background(const char *input);
+
+/**
+ * @brief Parses the file and args from the input and set them in cmd
+ *
+ * Logs error messages on failure
+ *
+ * @param input The raw command input
+ * @param cmd The command to set its file and args
+ * @return 0 on success otherwise -1
+ */
+int parse_basic_cmd(const char *input, command_t *cmd);
+
+/**
+ * @brief Parses the output path of a command from its arguments
+ *
+ * @param cmd The command to parse
+ */
+void parse_cmd_output(command_t *cmd);
+
+int parse_basic_cmd(const char *input, command_t *cmd) {
+    char **tokArray = tokenize(input, ARG_SEPERATOR);
+    if (tokArray == NULL) {
+        log_f(ERROR, "Basic command parsing from '%s' has failed.", input);
+        return -1;
     }
-    return modifiers;
+
+    if (tokArray[0] == NULL) {
+        log_f(ERROR, "There is no file in '%s'.", input);
+        delete_token_array(&tokArray);
+        return -1;
+    }
+
+    set_file(cmd, tokArray[0]);
+    set_args(cmd, tokArray);
+    return 0;
 }
 
-pipedCmd_t *pparse(const char *input)
-{
-    // Piped command separator as a string
-    const char pipeSeparator[] = {PIPE_OPERATOR, '\0'};
+void parse_cmd_output(command_t *cmd) {
     // Standard output redirection operator as a string
-    const char outputOperator[] = {OUTPUT_MODIFIER, '\0'};
+    const char output_operator[] = {OUTPUT_OPERATOR, '\0'};
+    // File output parsing
+    char **args = cmd->args;
+    size_t args_length = length(args);
+
+    if (args_length >= 2 &&
+        strcmp(args[args_length - 2], output_operator) == 0) {
+        cmd->output_path = args[args_length - 1];
+        // Remove modifier and value from the list of arguments
+        free(args[args_length - 2]);
+        args[args_length - 2] = NULL;
+        args[args_length - 1] = NULL;
+    }
+}
+
+command_t *parse_cmd(const char *input, bool *p_is_bg) {
+    char input_c[INPUT_SIZE];
+    strcpy(input_c, input);
+    *p_is_bg = false;
+    bool is_bg = is_background(input_c);
+    if (is_bg) str_replace(input_c, BACKGROUND_OPERATOR, ' ');
+    // Piped command separator as a string
+    const char pipe_separator[] = {PIPE_OPERATOR, '\0'};
     // Interrups parsing tasks and jumps to freeing memory
-    bool hasError = false;
+    bool has_error = false;
     // Input tokenized as piped command
-    char **pipedInput = tokenize(input, pipeSeparator);
-    size_t pipedInputCount = length(pipedInput);
+    char **piped_input = tokenize(input_c, pipe_separator);
+    if (piped_input == NULL) {
+        log_f(ERROR, "Tokenizing '%s' as piped command as failed!", input_c);
+        return NULL;
+    }
+
+    size_t piped_input_count = length(piped_input);
     // Command array
-    pipedCmd_t **inputArray = calloc(sizeof(pipedCmd_t *), pipedInputCount);
-    // Command's arguments
-    char **args;
-    size_t argsLength;
+    command_t **cmd_array = calloc(sizeof(command_t *), piped_input_count);
+    if (cmd_array == NULL) {
+        log_err(ERROR, "Memory allocation for an array of commands has failed");
+        delete_token_array(&piped_input);
+        return NULL;
+    }
 
-    for (size_t i = 0; i < pipedInputCount; i++)
-    {
-        if (is_background(pipedInput[i]))
-        {
-            error("Cannot run in background a piped command!");
-            hasError = true;
+    // Parses each command without linking piped output
+    for (size_t i = 0; i < piped_input_count; i++) {
+        if (is_background(piped_input[i])) {
+            log_f(ERROR, "Cannot run in background a piped command!");
+            has_error = true;
             break;
         }
-        // Parses each command without linking piped output
-        inputArray[i] = new_pipedCmd();
-        int result = parse(pipedInput[i], inputArray[i]->cmd);
-        if (result == -1)
-        {
+
+        cmd_array[i] = new_command();
+        int result = parse_basic_cmd(piped_input[i], cmd_array[i]);
+        if (result == -1) {
             // On failed parsing exit function
-            hasError = true;
+            has_error = true;
             break;
-        }
-
-        // File output parsing
-        args = inputArray[i]->cmd->args;
-        argsLength = length(args);
-        if (argsLength >= 2 &&
-            strcmp(args[argsLength - 2], outputOperator) == 0)
-        {
-            inputArray[i]->outPath = args[argsLength - 1];
-            // Remove modifier and value from the list of arguments
-            free(args[argsLength - 2]);
-            args[argsLength - 2] = NULL;
-            args[argsLength - 1] = NULL;
+        } else {
+            parse_cmd_output(cmd_array[i]);
         }
     }
     // Links the piped output
-    for (size_t i = 1; i < pipedInputCount && !hasError; i++)
-    {
-        pipedCmd_t *parent = inputArray[pipedInputCount - i - 1];
-        printf("Parent : %s\n", parent->cmd->name);
-        pipedCmd_t *child = inputArray[pipedInputCount - i];
-        if (child != NULL)
-        {
-            printf("Child : %s\n", child->cmd->name);
+    for (size_t i = 1; i < piped_input_count && !has_error; i++) {
+        command_t *parent = cmd_array[piped_input_count - i - 1];
+        command_t *child = cmd_array[piped_input_count - i];
+
+        log_f(DEBUG, "Parent : %s", parent->file);
+        if (child != NULL) {
+            log_f(DEBUG, "Child : %s", child->file);
+        } else {
+            log_f(DEBUG, "Childless");
         }
-        else
-        {
-            puts("Childless");
-        }
-        parent->childCmd = child;
+        parent->child = child;
     }
 
-    pipedCmd_t *pipedCmd = NULL;
-    delete_tokenArray(&pipedInput);
-    if (hasError)
-    {
-        for (size_t i = 0; inputArray[i] != NULL; i++)
-        {
-            delete_pipedCmd(&(inputArray[i]));
+    command_t *pipedCmd = NULL;
+    delete_token_array(&piped_input);
+    if (has_error) {
+        for (size_t i = 0; cmd_array[i] != NULL; i++) {
+            delete_command(&(cmd_array[i]));
         }
+    } else {
+        pipedCmd = cmd_array[0];
     }
-    else
-    {
-        pipedCmd = inputArray[0];
-    }
-    free(inputArray);
+    free(cmd_array);
+    *p_is_bg = is_bg;
     return pipedCmd;
 }

@@ -1,130 +1,79 @@
 #include "main.h"
-#include "cd.h"
-#include "command.h"
-#include "logger.h"
-#include "parser.h"
-#include "pipe.h"
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "cd.h"
+#include "command.h"
+#include "logger.h"
+#include "parser.h"
 
-char wdir[WDIR_SIZE];
+char g_cwd[WDIR_SIZE];
 
-void print_cwd()
-{
-    if (get_cwd(wdir, WDIR_SIZE) == NULL)
-    {
-        perror("[ERROR] Current working directory");
+void print_cwd() {
+    if (get_cwd(g_cwd, WDIR_SIZE) == NULL) {
+        log_err(ERROR, "Could not get the current working directory");
+        return;
     }
-    printf("%s$ ", wdir);
+    printf("%s$ ", g_cwd);
 }
-int main(void)
-{
-    set_level(DEBUG);
-    puts("Welcome in microShell");
 
+int main(int argc, const char *argv[]) {
+    // Sets the logger level from the arguments of the command
+    log_level_t level = WARN;
+    if (argc >= 2) {
+        if (strcmp(argv[1], "--debug") == 0) {
+            level = DEBUG;
+        } else {
+            printf("Usage: %s [--debug]\n--debug\tEnables debug logging.\n",
+                   argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    }
+    set_log_level(level);
+
+    // Initializes the program
+    puts("Welcome in microShell!");
+    const char chained_cmd_separator[] = {CHAINED_CMD_OPERATOR, '\0'};
     char input[INPUT_SIZE];
-    // char modifiers = 0;
     memset(input, '\0', INPUT_SIZE); // Initialize input as an empty string
-    // cmd_t *cmd = new_cmd(NULL);      // Empty command initialization
     print_cwd();
+    bool pursue = true;
 
-    while (true)
-    {
+    while (pursue) {
         // Gets the input from stdin
-        if (!fgets(input, INPUT_SIZE, stdin))
-        {
-            perror("Getting input error");
+        if (!fgets(input, INPUT_SIZE, stdin)) {
+            log_err(ERROR, "Could not get your input");
             return -1;
         }
         str_replace(input, '\n', '\0');
+        log_f(DEBUG, "Input: \"%s\"", input);
 
-        printf("Input : \"%s\"\n", input);
-
-        if (strncmp(EXIT_CMD, input,strlen(EXIT_CMD)) == 0)
-        {
-            break;
-        }
-        else if (strncmp(CD_CMD, input, strlen(CD_CMD)) == 0)
-        {
-            change_dir(input);
-        }
-        else if (strncmp(PWD_CMD, input, strlen(PWD_CMD)) == 0)
-        {
-            puts(wdir);
-        }
-        else
-        {
-            // Parses the command out of the input
-            pipedCmd_t *pcmd = pparse(input);
-            expipe(pcmd, !is_background(input));
-            delete_pipedCmd(&pcmd);
-        }
-        /*modifiers = get_modifiers(input);
-
-        if (IS_PIPED(modifiers))
-        {
-            puts("[DEBUG] Piped");
-            pipe_t *pipeCmds = new_pipe();
-            if (parse_pipe(input, pipeCmds) == 0)
-            {
-                if (execp(pipeCmds) == 0)
-                {
-                    puts("Pipe done!");
-                }
-                else
-                {
-                    perror("[ERROR] Piped execution");
+        // Tokenizes, parses and runs each chained command
+        char **tok_array = tokenize(input, chained_cmd_separator);
+        for (size_t i = 0; tok_array[i] != NULL; i++) {
+            if (strncmp(EXIT_CMD, tok_array[i], strlen(EXIT_CMD)) == 0) {
+                pursue = false;
+            } else if (strncmp(CD_CMD, tok_array[i], strlen(CD_CMD)) == 0) {
+                set_cwd(tok_array[i]);
+            } else if (strncmp(PWD_CMD, tok_array[i], strlen(PWD_CMD)) == 0) {
+                puts(g_cwd);
+            } // End: Self implemented command
+            else {
+                // Parses the command out of the input
+                bool is_bg;
+                command_t *cmd = parse_cmd(tok_array[i], &is_bg);
+                if (cmd != NULL) {
+                    execute(cmd, !is_bg);
+                    delete_command(&cmd);
                 }
             }
-            delete_pipe(&pipeCmds);
-        }
-        else
-        {
-            if (parse(input, cmd) != -1)
-            {
-                debug("Parsed input:");
-                printf("Name : %s\nArguments :\n", cmd->name);
+        } // End: Iterating over chained commands
+        delete_token_array(&tok_array);
 
-                for (int i = 0; cmd->args[i] != NULL; i++)
-                    puts(cmd->args[i]);
-                if (strcmp(EXIT_CMD, cmd->name) == 0)
-                {
-                    break;
-                }
-                else if (strcmp(CD_CMD, cmd->name) == 0)
-                {
-                    cwd(cmd);
-                }
-                else if (strcmp(PWD_CMD, cmd->name) == 0)
-                {
-                    puts(wdir);
-                }
-                else
-                {
-                    int r = exec(cmd);
-                    if (r == -1)
-                    {
-                        fprintf(stderr, "Exec exception\n");
-                    }
-                    else
-                    {
-                        puts("Done");
-                    }
-                }
-            }
-            else
-            {
-                fprintf(stderr, "Parsing error\n");
-            }
-        }*/
-
-        print_cwd();
+        if (pursue) print_cwd();
     }
-
-    // clear_cmd(cmd);
-    // free(cmd);
-
     return 0;
 }
